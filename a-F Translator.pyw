@@ -8,10 +8,11 @@ import pymsgbox
 import os
 import signal
 
-
+# Сочитания клавишь
 FOR_STRING = str()
 FOR_WORD = str()
 CAPS = str()
+# Списки для перевода
 LENG1 = str()
 LENG2 = str()
 
@@ -47,6 +48,7 @@ def load_config():
 
 
 def convert(x):
+    # Замена буквы на соответствующую из другого списка
     if x in LENG1:
         return LENG2[LENG1.index(x)]
     if x in LENG2:
@@ -58,18 +60,21 @@ def for_string():
     while True:
         try:
 
-            rs = ""
+            rs = ""  # Результат
 
-            keyboard.wait(FOR_STRING)
+            keyboard.wait(FOR_STRING)   # Ожидание нажатия комбинации клавишь
             time.sleep(0.3)
-            pyautogui.hotkey("shift", "home")
-            pyautogui.hotkey("alt", "shift")
-            pyautogui.hotkey("ctrl", "c")
+            pyautogui.hotkey("shift", "home")   # Комбинация клавишь, выделающая всю строку
+            time.sleep(0.01)
+            pyautogui.hotkey("alt", "shift")    # Смена языка
+            time.sleep(0.01)
+            pyautogui.hotkey("ctrl", "c")   # Копирование текста строки
+            time.sleep(0.01)
 
             s = pyperclip.paste()
 
             if type(s) != str:
-                pyautogui.hotkey("ctrl", "z")
+                pyautogui.hotkey("ctrl", "z")   # Если комбинация применена не к тексту, выделение уберается
                 return
 
             for i in s:
@@ -77,8 +82,10 @@ def for_string():
                     break
                 rs += convert(i)
 
+            # Печать результата
             print(rs)
             keyboard.write(rs)
+
         except Exception as e:
             print(e)
 
@@ -90,9 +97,12 @@ def for_word():
 
             keyboard.wait(FOR_WORD)
             time.sleep(0.3)
-            pyautogui.hotkey("shift", "ctrl", "left")
+            pyautogui.hotkey("shift", "ctrl", "left")   # Комбинация для выделения последнего слова
+            time.sleep(0.01)
             pyautogui.hotkey("alt", "shift")
+            time.sleep(0.01)
             pyautogui.hotkey("ctrl", "c")
+            time.sleep(0.01)
 
             s = pyperclip.paste()
 
@@ -119,8 +129,11 @@ def for_caps():
             keyboard.wait(CAPS)
             time.sleep(0.3)
             pyautogui.hotkey("shift", "home")
+            time.sleep(0.01)
             pyautogui.hotkey("alt", "shift")
+            time.sleep(0.01)
             pyautogui.hotkey("ctrl", "c")
+            time.sleep(0.01)
 
             s = pyperclip.paste()
 
@@ -128,6 +141,7 @@ def for_caps():
                 pyautogui.hotkey("ctrl", "z")
                 return
 
+            # Изменение регистра буквы на обратный
             for i in s:
                 if i.islower():
                     rs += i.upper()
@@ -141,22 +155,25 @@ def for_caps():
 
 
 def ex():
-    os.kill(os.getpid(), signal.SIGTERM)
+    os.kill(os.getpid(), signal.SIGTERM)    # Останавливает программу, убирая процесс. По другому потоки не закрыть
 
 
 if __name__ == '__main__':
 
     if not load_config():
-        exit()
+        exit()  # Завершение работы, если настройки не загруженны
 
+    # Создание потоков для каждой комбинации
     sr = threading.Thread(target=for_string)
     wo = threading.Thread(target=for_word)
     ca = threading.Thread(target=for_caps)
 
+    # Запуск потоков
     sr.start()
     wo.start()
     ca.start()
 
+    # Добавление иконки в Tray
     menu_options = (("Update", None, lambda x: load_config()),)
     systray = SysTrayIcon("a-f.ico", "а-F Translator", menu_options, on_quit=lambda x: ex())
     systray.start()
