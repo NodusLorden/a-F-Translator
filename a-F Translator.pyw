@@ -1,6 +1,6 @@
+from pynput.keyboard import Key, Controller
 import keyboard
 import threading
-import pyautogui
 import time
 import pyperclip
 from infi.systray import SysTrayIcon
@@ -47,115 +47,83 @@ def load_config():
         return False
 
 
-def convert(x):
+def convert(s):
     # Замена буквы на соответствующую из другого списка
-    if x in LENG1:
-        return LENG2[LENG1.index(x)]
-    if x in LENG2:
-        return LENG1[LENG2.index(x)]
-    return x
+    t = 0
+    leng = 0
+    rs = ""
+
+    # Поиск первого символа, определяющего язык
+    while t < len(s):
+        if s[t] in LENG1 and s[t] in LENG2:
+            t += 1
+        elif s[t] in LENG1:
+            leng = 1
+            break
+        elif s[t] in LENG2:
+            leng = 2
+            break
+        else:
+            t += 1
+
+    if leng == 0:
+        return s
+    
+    # Перевод с учётом языка прошлого символа
+    for i in s:
+        if i in LENG1 and i in LENG2:
+            if leng == 1:
+                rs += LENG2[LENG1.index(i)]
+            else:
+                rs += LENG1[LENG2.index(i)]
+
+        elif not (i in LENG1 or i in LENG2):
+            rs += i
+
+        else:
+            if i in LENG1:
+                rs += LENG2[LENG1.index(i)]
+                leng = 1
+            else:
+                rs += LENG1[LENG2.index(i)]
+                leng = 2
+
+    return rs
 
 
 def for_string():
+
+    kb = Controller()
+
     while True:
         try:
 
-            rs = ""  # Результат
+            keyboard.wait(FOR_STRING)
 
-            keyboard.wait(FOR_STRING)   # Ожидание нажатия комбинации клавишь
-            time.sleep(0.3)
-            pyautogui.hotkey("shift", "home")   # Комбинация клавишь, выделающая всю строку
-            time.sleep(0.01)
-            pyautogui.hotkey("alt", "shift")    # Смена языка
-            time.sleep(0.01)
-            pyautogui.hotkey("ctrl", "c")   # Копирование текста строки
-            time.sleep(0.01)
+            time.sleep(0.5)
+
+            with kb.pressed(Key.shift_l):
+                with kb.pressed(Key.home):
+                    time.sleep(0.1)
+
+            with kb.pressed(Key.ctrl_l):
+                with kb.pressed("c"):
+                    time.sleep(0.1)
 
             s = pyperclip.paste()
 
-            if type(s) != str:
-                pyautogui.hotkey("ctrl", "z")   # Если комбинация применена не к тексту, выделение уберается
-                return
-
-            for i in s:
-                if i == "\n":
-                    break
-                rs += convert(i)
+            rs = convert(s)
 
             # Печать результата
-            print(rs)
             keyboard.write(rs)
-
-        except Exception as e:
-            print(e)
-
-
-def for_word():
-    while True:
-        try:
-            rs = ""
-
-            keyboard.wait(FOR_WORD)
-            time.sleep(0.3)
-            pyautogui.hotkey("shift", "ctrl", "left")   # Комбинация для выделения последнего слова
-            time.sleep(0.01)
-            pyautogui.hotkey("alt", "shift")
-            time.sleep(0.01)
-            pyautogui.hotkey("ctrl", "c")
-            time.sleep(0.01)
-
-            s = pyperclip.paste()
-
-            if type(s) != str:
-                pyautogui.hotkey("ctrl", "z")
-                return
-
-            for i in s:
-                if i == "\n":
-                    break
-                rs += convert(i)
-
             print(rs)
-            keyboard.write(rs)
-        except Exception as e:
-            print(e)
 
-
-def for_caps():
-    while True:
-        try:
-            rs = ""
-
-            keyboard.wait(CAPS)
-            time.sleep(0.3)
-            pyautogui.hotkey("shift", "home")
-            time.sleep(0.01)
-            pyautogui.hotkey("alt", "shift")
-            time.sleep(0.01)
-            pyautogui.hotkey("ctrl", "c")
-            time.sleep(0.01)
-
-            s = pyperclip.paste()
-
-            if type(s) != str:
-                pyautogui.hotkey("ctrl", "z")
-                return
-
-            # Изменение регистра буквы на обратный
-            for i in s:
-                if i.islower():
-                    rs += i.upper()
-                else:
-                    rs += i.lower()
-
-            print(rs)
-            keyboard.write(rs)
         except Exception as e:
             print(e)
 
 
 def ex():
-    os.kill(os.getpid(), signal.SIGTERM)    # Останавливает программу, убирая процесс. По другому потоки не закрыть
+    os.kill(os.getpid(), signal.SIGTERM)    # Останавливает программу, убирая процесс. По-другому потоки не закрыть
 
 
 if __name__ == '__main__':
@@ -165,13 +133,9 @@ if __name__ == '__main__':
 
     # Создание потоков для каждой комбинации
     sr = threading.Thread(target=for_string)
-    wo = threading.Thread(target=for_word)
-    ca = threading.Thread(target=for_caps)
 
     # Запуск потоков
     sr.start()
-    wo.start()
-    ca.start()
 
     # Добавление иконки в Tray
     menu_options = (("Update", None, lambda x: load_config()),)
